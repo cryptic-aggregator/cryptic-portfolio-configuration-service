@@ -1,3 +1,6 @@
 [submodule "CrypticPortfolioConfiguration/cryptic-domain"]
 	path = CrypticPortfolioConfiguration/cryptic-domain
 	url = https://github.com/cryptic-aggregator/cryptic-domain
+[submodule "cryptic-domain"]
+	path = cryptic-domain
+	url = https://github.com/cryptic-aggregator/cryptic-domain

@@ -12,10 +12,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\cryptic-domain\Cryptic Domain\Cryptic Domain.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
         <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Models/Responses/wallet_responses.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
         <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Models/Requests/wallet_requests.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
         <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Rpc/BlockchainIneractionService.proto" GrpcServices="Client" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
