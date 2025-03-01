@@ -29,5 +29,8 @@
       <Folder Include=".github\" />
       <Folder Include="Interfaces\" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\cryptic-domain\Cryptic Domain\Cryptic Domain.csproj" />
+    </ItemGroup>
 
 </Project>
