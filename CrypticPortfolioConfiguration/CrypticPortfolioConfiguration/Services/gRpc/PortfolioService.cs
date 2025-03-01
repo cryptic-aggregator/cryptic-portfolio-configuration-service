@@ -35,7 +35,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             Name = request.Name,
             OwnerId = request.OwnerId,
-            CreatedAt = request.CreatedAt
+            CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
 
         var createdPortfolio = await _portfolioRepo.CreateAsync(portfolio);

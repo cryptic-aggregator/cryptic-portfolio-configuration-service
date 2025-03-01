@@ -1,6 +1,7 @@
 using CrypticPortfolioConfiguration.Database.Repos;
 using CrypticPortfolioConfiguration.DI;
 using CrypticPortfolioConfiguration.Services.Config;
+using CrypticPortfolioConfiguration.Services.gRpc;
 
 var cfg = new ConfigService();
 var builder = WebApplication.CreateBuilder(args);
@@ -18,9 +19,9 @@ app.MapGet("/",
     () =>
         "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
-app.MapGrpcService<PortfolioRepo>();
+app.MapGrpcService<PortfolioServiceImpl>();
 
-app.Urls.Add("http://+:5000");
-app.Urls.Add("https://+:5001");
+app.Urls.Add("http://+:5001");
+app.Urls.Add("https://+:5002");
 
 app.Run();
