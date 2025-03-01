@@ -13,6 +13,9 @@ public class PortfolioTable : IDatabaseTable
     [Column("name", NpgsqlDbType.Varchar)]
     public string Name { get; set; }
     
+    [Column("owner_id", NpgsqlDbType.Integer)]
+    public int OwnerId { get; set; }
+    
     [Column("created_at", NpgsqlDbType.Bigint)]
     public long CreatedAt { get; set; }
 }

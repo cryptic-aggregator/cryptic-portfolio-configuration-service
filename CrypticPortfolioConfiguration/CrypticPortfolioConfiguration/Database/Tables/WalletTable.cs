@@ -15,8 +15,7 @@ public class WalletTable : IDatabaseTable
         
     [Column("wallet_address", NpgsqlDbType.Varchar)]
     public string WalletAddress { get; set; }
-        
-    // Unix timestamp (seconds since epoch)
+    
     [Column("created_at", NpgsqlDbType.Bigint)]
     public long CreatedAt { get; set; }
 }
