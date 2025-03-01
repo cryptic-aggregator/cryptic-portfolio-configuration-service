@@ -3,11 +3,13 @@ using CrypticPortfolioConfiguration.DI;
 using CrypticPortfolioConfiguration.Services.Config;
 using CrypticPortfolioConfiguration.Services.gRpc;
 
-var cfg = new ConfigService();
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddGrpc();
+
+var cfg = new ConfigService();
+
+// Add services to the container.
 builder.Services.InjectConfiguration(cfg);
 builder.Services.ConfigureMicroservices(cfg);
 builder.Services.ConfigureRepositories();
