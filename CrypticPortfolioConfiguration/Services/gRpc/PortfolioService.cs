@@ -1,4 +1,5 @@
 using Cryptic.Base.V1.Models.Responses;
+using Cryptic.BlockchainInteraction.Rpc;
 using Cryptic.PortfolioConfiguration.Models.Requests;
 using Cryptic.PortfolioConfiguration.Models.Responses;
 using Cryptic.PortfolioConfiguration.Rpc;
@@ -10,11 +11,15 @@ namespace CrypticPortfolioConfiguration.Services.gRpc;
 
 public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 {
+    private readonly WalletRepo _walletRepo;
     private readonly PortfolioRepo _portfolioRepo;
+    private readonly WalletService.WalletServiceClient _walletService;
 
-    public PortfolioServiceImpl(PortfolioRepo portfolioRepo)
+    public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo, WalletService.WalletServiceClient walletService)
     {
         _portfolioRepo = portfolioRepo;
+        _walletRepo = walletRepo;
+        _walletService = walletService;
     }
 
     private Portfolio ToGrpcPortfolio(PortfolioTable table)
@@ -92,5 +97,60 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
         await _portfolioRepo.DeleteAsync(existingPortfolio.Id);
         return new DeletePortfolioResponse { Result = new TaskResponse(){Success = true} };
+    }
+    
+    public override async Task<ConnectWalletsResponse> ConnectWallets(ConnectWalletsRequest request, ServerCallContext context)
+    {
+        var wallets = new List<Wallet>();
+        long createdAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        foreach (var walletAddress in request.WalletAddresses)
+        {
+            var walletEntity = new WalletTable
+            {
+                PortfolioId = request.PortfolioId,
+                WalletAddress = walletAddress,
+                CreatedAt = createdAt
+            };
+
+            var createdWallet = await _walletRepo.CreateAsync(walletEntity);
+            wallets.Add(new Wallet
+            {
+                Id = createdWallet.Id,
+                PortfolioId = createdWallet.PortfolioId,
+                WalletAddress = createdWallet.WalletAddress,
+                CreatedAt = createdWallet.CreatedAt
+            });
+        }
+
+        var response = new ConnectWalletsResponse();
+        response.Wallets.AddRange(wallets);
+        return response;
+    }
+    
+    public override async Task<GetPortfolioInfoResponse> GetPortfolioInfo(GetPortfolioInfoRequest request, ServerCallContext context)
+    {
+        var portfolioEntity = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
+        if (portfolioEntity == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
+        }
+        
+        var walletEntities = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
+        var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
+        
+        Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
+        walletCoinsRequest.Address.AddRange(walletAddresses);
+
+        var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
+        
+        var response = new GetPortfolioInfoResponse
+        {
+            Portfolio = ToGrpcPortfolio(portfolioEntity),
+            WalletInfo = walletCoinsResponse,
+            Result = new TaskResponse { Success = true }
+        };
+
+        return response;
     }
 }
