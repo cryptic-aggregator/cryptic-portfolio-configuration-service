@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "Base/v1/Models/Responses/task_response.proto";
+
+package cryptic.blockchain_interaction.models.responses;
+
+message Coin {
+  string symbol = 1;
+  string balance = 2;
+  string avgPurchasePrice = 3;
+  string currentMarketPrice = 4;
+  string currentValue = 5;
+  string priceChange1hPercent = 6;
+  string changeSinceAvgPurchase = 7;
+}
+
+message GetWalletCoinsResponse {
+  repeated Coin coins = 1;
+  string totalPortfolioValueUSDT = 2;
+  base.v1.models.responses.TaskResponse result = 3;
+}
