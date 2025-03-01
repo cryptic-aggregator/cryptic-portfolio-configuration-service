@@ -1,0 +1,29 @@
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5118",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Schema": "portfolio_configuration",
+        "ConnString": "Host=20.215.241.137;Port=5432;Database=portfolio_configuration;Username=postgres;Password=79kRvN3S6bBiy34X;",
+        "BlockchainInteractionConnString": "http://localhost:4001"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7162;http://localhost:5118",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Schema": "portfolio_configuration",
+        "ConnString": "Host=20.215.241.137;Port=5432;Database=portfolio_configuration;Username=postgres;Password=79kRvN3S6bBiy34X;",
+        "BlockchainInteractionConnString": "http://localhost:4001"
+      }
+    }
+  }
+}
