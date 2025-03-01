@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
-EXPOSE 5001
+EXPOSE 5000 5001
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
