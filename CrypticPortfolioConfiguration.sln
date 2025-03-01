@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrypticPortfolioConfiguration", "CrypticPortfolioConfiguration\CrypticPortfolioConfiguration.csproj", "{4774E337-73FD-4DEC-97FA-5489DDE3654B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptic Domain", "cryptic-domain\Cryptic Domain\Cryptic Domain.csproj", "{6DA7D83F-1540-464B-BE2D-C04E6F5B0F4A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4774E337-73FD-4DEC-97FA-5489DDE3654B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4774E337-73FD-4DEC-97FA-5489DDE3654B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4774E337-73FD-4DEC-97FA-5489DDE3654B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4774E337-73FD-4DEC-97FA-5489DDE3654B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DA7D83F-1540-464B-BE2D-C04E6F5B0F4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DA7D83F-1540-464B-BE2D-C04E6F5B0F4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DA7D83F-1540-464B-BE2D-C04E6F5B0F4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DA7D83F-1540-464B-BE2D-C04E6F5B0F4A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
