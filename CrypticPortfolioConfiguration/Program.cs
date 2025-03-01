@@ -21,7 +21,7 @@ app.MapGet("/",
 
 app.MapGrpcService<PortfolioServiceImpl>();
 
-app.Urls.Add("http://+:5001");
-app.Urls.Add("https://+:5002");
+app.Urls.Add("http://+:5000");
+app.Urls.Add("https://+:5001");
 
 app.Run();
