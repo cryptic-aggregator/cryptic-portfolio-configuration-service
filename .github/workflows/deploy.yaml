@@ -46,7 +46,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
             docker stop cryptic-portfolio_configuration-service || true
             docker rm cryptic-portfolio_configuration-service || true
-            docker run -d --name cryptic-portfolio_configuration-service -p 5000:5001 \
+            docker run -d --name cryptic-portfolio_configuration-service -p 5001:5001 \
             -e "ConnString=${{ secrets.ConnString }}" \
             -e "Schema=${{ secrets.Schema }}" \
             -e "BlockchainInteractionConnString=${{ secrets.BLOCKCHAININTERACTIONCONNSTRING }}" \
