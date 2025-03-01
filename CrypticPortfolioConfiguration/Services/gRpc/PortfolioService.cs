@@ -141,6 +141,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         
         Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
         walletCoinsRequest.Address.AddRange(walletAddresses);
+        walletCoinsRequest.PortfolioId = request.PortfolioId;
 
         var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
         
