@@ -40,6 +40,24 @@ public class WalletRepo : BaseDbRepo<WalletTable>
     
     public async Task<List<WalletTable>> GetByPortfolioIdAsync(int portfolioId)
     {
+        var command = $"SELECT {string.Join(", ", Columns)} FROM {FullTablePath} WHERE portfolio_id = @PortfolioId";
+        using (var cmd = new NpgsqlCommand(command, Connection))
+        {
+            cmd.Parameters.AddWithValue("PortfolioId", portfolioId);
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                var walletList = new List<WalletTable>();
+                while (await reader.ReadAsync())
+                {
+                    walletList.Add(await reader.MapAsync<WalletTable>());
+                }
+                return walletList;
+            }
+        }
+    }
+    
+    public async Task<List<WalletTable>> GetVisibleByPortfolioIdAsync(int portfolioId)
+    {
         var command = $"SELECT {string.Join(", ", Columns)} FROM {FullTablePath} WHERE portfolio_id = @PortfolioId and visibility = 1";
         using (var cmd = new NpgsqlCommand(command, Connection))
         {

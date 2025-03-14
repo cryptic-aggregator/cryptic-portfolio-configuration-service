@@ -139,7 +139,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
         }
         
-        var walletEntities = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
+        var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
         var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
         
         Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
@@ -177,5 +177,33 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             Result = new TaskResponse { Success = success }
         };
+    }
+    
+    public override async Task<GetWalletsByPortfolioIdResponse> GetWalletsByPortfolioId(
+        GetWalletsByPortfolioIdRequest request,
+        ServerCallContext context)
+    {
+        if (request.PortfolioId <= 0)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio ID"));
+        }
+        var walletTables = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
+        
+        var response = new GetWalletsByPortfolioIdResponse();
+        foreach (var w in walletTables)
+        {
+            var wallet = new Wallet
+            {
+                Id = w.Id,
+                PortfolioId = w.PortfolioId,
+                WalletAddress = w.WalletAddress,
+                Visibility = w.Visibility,
+                ConnectionType = w.ConnectionType,
+                CreatedAt = w.CreatedAt
+            };
+            response.Wallets.Add(wallet);
+        }
+
+        return response;
     }
 }
