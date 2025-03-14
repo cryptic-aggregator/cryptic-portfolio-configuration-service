@@ -140,18 +140,33 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         }
         
         var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
-        var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
+        var response = new GetPortfolioInfoResponse();
         
-        Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
-        walletCoinsRequest.Address.AddRange(walletAddresses);
-        walletCoinsRequest.PortfolioId = request.PortfolioId;
+        if (walletEntities != null)
+        {
+            var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
+        
+            Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
+            walletCoinsRequest.Address.AddRange(walletAddresses);
+            walletCoinsRequest.PortfolioId = request.PortfolioId;
+        
+            var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
+        
+            response = new GetPortfolioInfoResponse
+            {
+                Portfolio = ToGrpcPortfolio(portfolioEntity),
+                WalletInfo = walletCoinsResponse,
+                Result = new TaskResponse { Success = true }
+            };
 
-        var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
+            return response;
+        }
         
-        var response = new GetPortfolioInfoResponse
+        
+        response = new GetPortfolioInfoResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
-            WalletInfo = walletCoinsResponse,
+            WalletInfo = null,
             Result = new TaskResponse { Success = true }
         };
 
