@@ -1,3 +1,4 @@
+using Cryptic_Domain.Enums.Portfolio;
 using Cryptic.Base.V1.Models.Responses;
 using Cryptic.BlockchainInteraction.Rpc;
 using Cryptic.PortfolioConfiguration.Models.Requests;
@@ -110,7 +111,9 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             {
                 PortfolioId = request.PortfolioId,
                 WalletAddress = walletAddress,
-                CreatedAt = createdAt
+                CreatedAt = createdAt,
+                ConnectionType = request.ConnectionType,
+                Visibility = (int)WalletVisibility.Public
             };
 
             var createdWallet = await _walletRepo.CreateAsync(walletEntity);
@@ -153,5 +156,26 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         };
 
         return response;
+    }
+    
+    public override async Task<PatchWalletVisibilityResponse> PatchWalletVisibility(
+        PatchWalletVisibilityRequest request, 
+        ServerCallContext context)
+    {
+        if (request.PortfolioId <= 0 || request.WalletId <= 0)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio or wallet ID"));
+        }
+        
+        var success = await _walletRepo.UpdateVisibilityAsync(
+            request.PortfolioId, 
+            request.WalletId, 
+            request.Visibility
+        );
+        
+        return new PatchWalletVisibilityResponse
+        {
+            Result = new TaskResponse { Success = success }
+        };
     }
 }
