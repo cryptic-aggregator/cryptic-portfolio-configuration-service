@@ -50,5 +50,5 @@ jobs:
             -e "ConnString=${{ secrets.ConnString }}" \
             -e "Schema=${{ secrets.Schema }}" \
             -e "BlockchainInteractionConnString=${{ secrets.BLOCKCHAININTERACTIONCONNSTRING }}" \
-            -e "AnalyticConnString=${{ secrets.AnalyticConnString }}" \
+            -e "AnalyticConnString=${{ secrets.ANALYTICCONNSTRING }}" \
             ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
