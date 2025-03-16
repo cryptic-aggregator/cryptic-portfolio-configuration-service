@@ -11,12 +11,14 @@ public class ConfigService : IDatabaseConfiguration, IMicroservicesConfig
         ConnString = Environment.GetEnvironmentVariable(nameof(this.ConnString)) ?? throw DrawAllConfigVars();
         Schema = $"\"{Environment.GetEnvironmentVariable(nameof(this.Schema))}\"" ?? throw DrawAllConfigVars();
         BlockchainInteractionConnString = Environment.GetEnvironmentVariable(nameof(BlockchainInteractionConnString)) ?? throw new Exception($"You could provide a {nameof(BlockchainInteractionConnString)} env var");
+        AnalyticConnString = Environment.GetEnvironmentVariable(nameof(AnalyticConnString)) ?? throw new Exception($"You could provide a {nameof(AnalyticConnString)} env var");
     }
     
     public string ConnString { get; private set; }
     public string Schema { get; private set; }
 
     public string BlockchainInteractionConnString { get; private set; }
+    public string AnalyticConnString { get; private set;}
 
     private Exception DrawAllConfigVars()
     {

@@ -1,6 +1,8 @@
 using Cryptic_Domain.Enums.Portfolio;
 using Cryptic.Base.V1.Models.Responses;
 using Cryptic.BlockchainInteraction.Rpc;
+using Cryptic.PortfolioAnalytic.Models.Requests;
+using Cryptic.PortfolioAnalytic.Rpc;
 using Cryptic.PortfolioConfiguration.Models.Requests;
 using Cryptic.PortfolioConfiguration.Models.Responses;
 using Cryptic.PortfolioConfiguration.Rpc;
@@ -15,12 +17,15 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     private readonly WalletRepo _walletRepo;
     private readonly PortfolioRepo _portfolioRepo;
     private readonly WalletService.WalletServiceClient _walletService;
+    private readonly PortfolioAnalyticService.PortfolioAnalyticServiceClient _portfolioAnalyticService;
 
-    public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo, WalletService.WalletServiceClient walletService)
+    public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo,
+        WalletService.WalletServiceClient walletService, PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService)
     {
         _portfolioRepo = portfolioRepo;
         _walletRepo = walletRepo;
         _walletService = walletService;
+        _portfolioAnalyticService = portfolioAnalyticService;
     }
 
     private Portfolio ToGrpcPortfolio(PortfolioTable table)
@@ -78,10 +83,10 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
         }
-        
+
         existingPortfolio.Name = portfolioData.Name;
         await _portfolioRepo.UpdateAsync(existingPortfolio, x => new { x.Name });
-        
+
         var updatedPortfolio =
             await _portfolioRepo.GetByIdAndOwnerIdAsync(existingPortfolio.Id, existingPortfolio.OwnerId);
         return new GetPortfolioResponse { Portfolio = ToGrpcPortfolio(updatedPortfolio) };
@@ -97,10 +102,11 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         }
 
         await _portfolioRepo.DeleteAsync(existingPortfolio.Id);
-        return new DeletePortfolioResponse { Result = new TaskResponse(){Success = true} };
+        return new DeletePortfolioResponse { Result = new TaskResponse() { Success = true } };
     }
-    
-    public override async Task<ConnectWalletsResponse> ConnectWallets(ConnectWalletsRequest request, ServerCallContext context)
+
+    public override async Task<ConnectWalletsResponse> ConnectWallets(ConnectWalletsRequest request,
+        ServerCallContext context)
     {
         var wallets = new List<Wallet>();
         long createdAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -130,28 +136,30 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         response.Wallets.AddRange(wallets);
         return response;
     }
-    
-    public override async Task<GetPortfolioInfoResponse> GetPortfolioInfo(GetPortfolioInfoRequest request, ServerCallContext context)
+
+    public override async Task<GetPortfolioInfoResponse> GetPortfolioInfo(GetPortfolioInfoRequest request,
+        ServerCallContext context)
     {
         var portfolioEntity = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
         if (portfolioEntity == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
         }
-        
+
         var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
         var response = new GetPortfolioInfoResponse();
-        
+
         if (walletEntities != null)
         {
             var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
-        
-            Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
+
+            Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest walletCoinsRequest =
+                new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest();
             walletCoinsRequest.Address.AddRange(walletAddresses);
             walletCoinsRequest.PortfolioId = request.PortfolioId;
-        
+
             var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
-        
+
             response = new GetPortfolioInfoResponse
             {
                 Portfolio = ToGrpcPortfolio(portfolioEntity),
@@ -161,8 +169,8 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
             return response;
         }
-        
-        
+
+
         response = new GetPortfolioInfoResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
@@ -172,28 +180,28 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
         return response;
     }
-    
+
     public override async Task<PatchWalletVisibilityResponse> PatchWalletVisibility(
-        PatchWalletVisibilityRequest request, 
+        PatchWalletVisibilityRequest request,
         ServerCallContext context)
     {
         if (request.PortfolioId <= 0 || request.WalletId <= 0)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio or wallet ID"));
         }
-        
+
         var success = await _walletRepo.UpdateVisibilityAsync(
-            request.PortfolioId, 
-            request.WalletId, 
+            request.PortfolioId,
+            request.WalletId,
             request.Visibility
         );
-        
+
         return new PatchWalletVisibilityResponse
         {
             Result = new TaskResponse { Success = success }
         };
     }
-    
+
     public override async Task<GetWalletsByPortfolioIdResponse> GetWalletsByPortfolioId(
         GetWalletsByPortfolioIdRequest request,
         ServerCallContext context)
@@ -202,8 +210,9 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio ID"));
         }
+
         var walletTables = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
-        
+
         var response = new GetWalletsByPortfolioIdResponse();
         foreach (var w in walletTables)
         {
@@ -220,5 +229,46 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         }
 
         return response;
+    }
+
+    public override async Task<GetPortfolioCalculationResponse> GetPortfolioCalculation(
+        GetPortfolioCalculationRequest request, ServerCallContext context)
+    {
+        var portfolioEntity = await _portfolioRepo.GetByIdAsync(request.PortfolioId);
+        if (portfolioEntity == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
+        }
+
+        var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+
+        if (walletEntities == null || !walletEntities.Any())
+        {
+            return new GetPortfolioCalculationResponse
+            {
+                Portfolio = ToGrpcPortfolio(portfolioEntity),
+                Result = new TaskResponse { Success = true }
+            };
+        }
+
+        var walletAddresses = walletEntities.Select(w => w.WalletAddress).ToList();
+        var walletCoinsRequest = new Cryptic.BlockchainInteraction.Models.Requests.GetWalletCoinsRequest
+        {
+            PortfolioId = request.PortfolioId
+        };
+        
+        walletCoinsRequest.Address.AddRange(walletAddresses);
+
+        var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
+
+        var calcRequest = new CalculateWalletRequest { WalletResponse = walletCoinsResponse };
+        var calcResponse = await _portfolioAnalyticService.GetAssetAllocationsAsync(calcRequest);
+        
+        return new GetPortfolioCalculationResponse
+        {
+            Portfolio = ToGrpcPortfolio(portfolioEntity),
+            CalculatedCoins = { calcResponse.WalletCoins },
+            Result = new TaskResponse { Success = true }
+        };
     }
 }

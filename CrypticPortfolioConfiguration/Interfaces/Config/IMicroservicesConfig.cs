@@ -5,4 +5,6 @@ namespace CrypticPortfolioConfiguration.Interfaces.Config;
 public interface IMicroservicesConfig
 {
     public string BlockchainInteractionConnString { get; }
+    
+    public string AnalyticConnString { get; }
 }

@@ -19,6 +19,12 @@
         <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/Base/v1/Models/Responses/error_model.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Models/Responses/analytic_responses.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Models/Requests/analytic_requests.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Rpc/PortfolioAnalyticService.proto" GrpcServices="Client" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
+    </ItemGroup>
+
     <!--Portfolio Protos-->
     <ItemGroup>
         <Protobuf Include="../cryptic-domain/Cryptic Domain/Protos/PortfolioConfiguration/Models/Responses/portfolio_responses.proto" GrpcServices="Server" AdditionalImportDirs="../cryptic-domain/Cryptic Domain/Protos" />
