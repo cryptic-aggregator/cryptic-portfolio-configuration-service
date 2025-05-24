@@ -16,6 +16,16 @@ public class WalletTable : IDatabaseTable
     [Column("wallet_address", NpgsqlDbType.Varchar)]
     public string WalletAddress { get; set; }
     
+            
+    [Column("name", NpgsqlDbType.Varchar)]
+    public string Name { get; set; }
+    
+    [Column("connector", NpgsqlDbType.Varchar)]
+    public string Connector { get; set; }
+    
+    [Column("caip_address", NpgsqlDbType.Varchar)]
+    public string CaipAddress { get; set; }
+    
     [Column("visibility", NpgsqlDbType.Varchar)]
     public int Visibility { get; set; }
     

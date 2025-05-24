@@ -18,9 +18,9 @@ public class WalletRepo : BaseDbRepo<WalletTable>
     {
         var insertCommand = $@"
         INSERT INTO {FullTablePath} 
-            (portfolio_id, wallet_address, created_at, visibility, connection_type) 
+            (portfolio_id, wallet_address, name, connector, caip_address, created_at, visibility, connection_type) 
         VALUES 
-            (@PortfolioId, @WalletAddress, @CreatedAt, @Visibility, @ConnectionType) 
+            (@PortfolioId, @WalletAddress, @Name, @Connector, @CaipAddress, @CreatedAt, @Visibility, @ConnectionType) 
         RETURNING id;
     ";
 
@@ -28,9 +28,12 @@ public class WalletRepo : BaseDbRepo<WalletTable>
         {
             cmd.Parameters.AddWithValue("@PortfolioId", wallet.PortfolioId);
             cmd.Parameters.AddWithValue("@WalletAddress", wallet.WalletAddress);
+            cmd.Parameters.AddWithValue("@Name", wallet.Name);
+            cmd.Parameters.AddWithValue("@Connector", wallet.Connector);
+            cmd.Parameters.AddWithValue("@CaipAddress", wallet.CaipAddress);
             cmd.Parameters.AddWithValue("@CreatedAt", wallet.CreatedAt);
-            cmd.Parameters.AddWithValue("@Visibility", (int)wallet.Visibility);
-            cmd.Parameters.AddWithValue("@ConnectionType", (int)wallet.ConnectionType);
+            cmd.Parameters.AddWithValue("@Visibility", wallet.Visibility);
+            cmd.Parameters.AddWithValue("@ConnectionType", wallet.ConnectionType);
 
             wallet.Id = (int)await cmd.ExecuteScalarAsync();
         }
@@ -84,7 +87,7 @@ public class WalletRepo : BaseDbRepo<WalletTable>
 
         using (var cmd = new NpgsqlCommand(commandText, Connection))
         {
-            cmd.Parameters.AddWithValue("@Visibility", (int)newVisibility);
+            cmd.Parameters.AddWithValue("@Visibility", newVisibility);
             cmd.Parameters.AddWithValue("@PortfolioId", portfolioId);
             cmd.Parameters.AddWithValue("@WalletId", walletId);
 

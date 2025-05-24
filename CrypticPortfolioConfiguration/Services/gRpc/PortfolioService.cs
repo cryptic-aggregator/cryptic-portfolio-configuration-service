@@ -20,7 +20,8 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     private readonly PortfolioAnalyticService.PortfolioAnalyticServiceClient _portfolioAnalyticService;
 
     public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo,
-        WalletService.WalletServiceClient walletService, PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService)
+        WalletService.WalletServiceClient walletService,
+        PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService)
     {
         _portfolioRepo = portfolioRepo;
         _walletRepo = walletRepo;
@@ -108,33 +109,44 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     public override async Task<ConnectWalletsResponse> ConnectWallets(ConnectWalletsRequest request,
         ServerCallContext context)
     {
-        var wallets = new List<Wallet>();
-        long createdAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var createdAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var resp = new ConnectWalletsResponse();
 
-        foreach (var walletAddress in request.WalletAddresses)
+        foreach (var w in request.Wallets)
         {
-            var walletEntity = new WalletTable
+            var portfolio = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
+            if (portfolio == null)
+                throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found or access denied"));
+
+            var entity = new WalletTable
             {
                 PortfolioId = request.PortfolioId,
-                WalletAddress = walletAddress,
+                WalletAddress = w.WalletAddress,
+                Name = w.Name,
+                Connector = w.Connector,
+                CaipAddress = w.CaipAddress,
                 CreatedAt = createdAt,
-                ConnectionType = request.ConnectionType,
-                Visibility = (int)WalletVisibility.Public
+                Visibility = (int)WalletVisibility.Public,
+                ConnectionType = w.ConnectionType
             };
 
-            var createdWallet = await _walletRepo.CreateAsync(walletEntity);
-            wallets.Add(new Wallet
+            var created = await _walletRepo.CreateAsync(entity);
+            
+            resp.Wallets.Add(new Wallet
             {
-                Id = createdWallet.Id,
-                PortfolioId = createdWallet.PortfolioId,
-                WalletAddress = createdWallet.WalletAddress,
-                CreatedAt = createdWallet.CreatedAt
+                Id = created.Id,
+                PortfolioId = created.PortfolioId,
+                Name = created.Name,
+                Connector = created.Connector,
+                CaipAddress = created.CaipAddress,
+                ConnectionType = created.ConnectionType,
+                Visibility = created.Visibility,
+                WalletAddress = created.WalletAddress,
+                CreatedAt = created.CreatedAt
             });
         }
 
-        var response = new ConnectWalletsResponse();
-        response.Wallets.AddRange(wallets);
-        return response;
+        return resp;
     }
 
     public override async Task<GetPortfolioInfoResponse> GetPortfolioInfo(GetPortfolioInfoRequest request,
@@ -223,7 +235,10 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
                 WalletAddress = w.WalletAddress,
                 Visibility = w.Visibility,
                 ConnectionType = w.ConnectionType,
-                CreatedAt = w.CreatedAt
+                CreatedAt = w.CreatedAt,
+                Name = w.Name,
+                Connector = w.Connector,
+                CaipAddress = w.CaipAddress
             };
             response.Wallets.Add(wallet);
         }
@@ -256,14 +271,14 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             PortfolioId = request.PortfolioId
         };
-        
+
         walletCoinsRequest.Address.AddRange(walletAddresses);
 
         var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
 
         var calcRequest = new CalculateWalletRequest { WalletResponse = walletCoinsResponse };
         var calcResponse = await _portfolioAnalyticService.GetAssetAllocationsAsync(calcRequest);
-        
+
         return new GetPortfolioCalculationResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
