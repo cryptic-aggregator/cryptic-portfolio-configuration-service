@@ -8,27 +8,35 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     env:
       ConnString: ${{ secrets.ConnString }}
       Schema: ${{ secrets.Schema }}
 
     steps:
-      - name: Checkout
+      # 1. Чекаут коду
+      - name: Checkout code
         uses: actions/checkout@v2
         with:
           submodules: true
 
-      - name: Сonfigure Docker Buildx
+      # 2. Налаштовуємо QEMU для емуляції ARM64
+      - name: Set up QEMU (for cross-building)
+        uses: docker/setup-qemu-action@v2
+
+      # 3. Налаштовуємо Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Login docker hub
+      # 4. Логін до Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      # 5. Збираємо й пушимо мультиархітектурний образ (amd64 + arm64)
+      - name: Build and push multi-arch Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -36,7 +44,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
 
-      - name: Deploy SSH
+      # 6. Деплой через SSH (ваша звичайна логіка)
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.4
         with:
           host: 20.215.241.137
@@ -44,12 +53,17 @@ jobs:
           password: ${{ secrets.SERVER_SSH_PASSWORD }}
           port: 22
           script: |
+            # Підтягуємо оновлений образ
             docker pull ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
+
+            # Остановлюємо, видаляємо старий контейнер
             docker stop cryptic-portfolio_configuration-service || true
             docker rm cryptic-portfolio_configuration-service || true
+
+            # Запускаємо новий контейнер
             docker run -d --name cryptic-portfolio_configuration-service -p 5001:5001 \
-            -e "ConnString=${{ secrets.ConnString }}" \
-            -e "Schema=${{ secrets.Schema }}" \
-            -e "BlockchainInteractionConnString=${{ secrets.BLOCKCHAININTERACTIONCONNSTRING }}" \
-            -e "AnalyticConnString=${{ secrets.ANALYTICCONNSTRING }}" \
-            ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
+              -e "ConnString=${{ secrets.ConnString }}" \
+              -e "Schema=${{ secrets.Schema }}" \
+              -e "BlockchainInteractionConnString=${{ secrets.BLOCKCHAININTERACTIONCONNSTRING }}" \
+              -e "AnalyticConnString=${{ secrets.ANALYTICCONNSTRING }}" \
+              ${{ secrets.DOCKER_USERNAME }}/cryptic-portfolio_configuration-service:latest
