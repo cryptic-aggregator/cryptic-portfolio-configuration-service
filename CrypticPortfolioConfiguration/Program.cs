@@ -13,6 +13,7 @@ var cfg = new ConfigService();
 builder.Services.InjectConfiguration(cfg);
 builder.Services.ConfigureMicroservices(cfg);
 builder.Services.ConfigureRepositories();
+builder.Services.AddMassTransitWithRabbitMQ(cfg);
 
 var app = builder.Build();
 

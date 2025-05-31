@@ -1,4 +1,5 @@
 using Cryptic_Domain.Enums.Portfolio;
+using Cryptic_Domain.Models.MassTransit;
 using Cryptic.Base.V1.Models.Responses;
 using Cryptic.BlockchainInteraction.Rpc;
 using Cryptic.PortfolioAnalytic.Models.Requests;
@@ -9,6 +10,7 @@ using Cryptic.PortfolioConfiguration.Rpc;
 using CrypticPortfolioConfiguration.Database.Repos;
 using CrypticPortfolioConfiguration.Database.Tables;
 using Grpc.Core;
+using MassTransit;
 
 namespace CrypticPortfolioConfiguration.Services.gRpc;
 
@@ -18,15 +20,17 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     private readonly PortfolioRepo _portfolioRepo;
     private readonly WalletService.WalletServiceClient _walletService;
     private readonly PortfolioAnalyticService.PortfolioAnalyticServiceClient _portfolioAnalyticService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo,
         WalletService.WalletServiceClient walletService,
-        PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService)
+        PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService, IPublishEndpoint publishEndpoint)
     {
         _portfolioRepo = portfolioRepo;
         _walletRepo = walletRepo;
         _walletService = walletService;
         _portfolioAnalyticService = portfolioAnalyticService;
+        _publishEndpoint = publishEndpoint;
     }
 
     private Portfolio ToGrpcPortfolio(PortfolioTable table)
@@ -131,6 +135,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             };
 
             var created = await _walletRepo.CreateAsync(entity);
+            await _publishEndpoint.Publish(new NewWalletConnectedMessage(created.Id, created.WalletAddress));
             
             resp.Wallets.Add(new Wallet
             {
