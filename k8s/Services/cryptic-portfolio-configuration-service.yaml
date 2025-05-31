@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio-config-service
+  labels:
+    app: portfolio-config
+spec:
+  selector:
+    app: portfolio-config
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 5001
+  type: ClusterIP

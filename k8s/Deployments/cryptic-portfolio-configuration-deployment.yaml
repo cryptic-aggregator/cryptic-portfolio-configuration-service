@@ -1,0 +1,34 @@
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-config-deployment
+  labels:
+    app: portfolio-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio-config
+  template:
+    metadata:
+      labels:
+        app: portfolio-config
+    spec:
+      containers:
+        - name: portfolio-config-container
+          image: stasex/cryptic-portfolio_configuration-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5001
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: ConnString
+              value: "Host=37.27.196.233;Port=5432;Database=portfolio_configuration;Username=postgres;Password=N66kxGSsA9m6uH24;"
+            - name: Schema
+              value: "portfolio_configuration"
+            - name: BlockchainInteractionConnString
+              value: "https://blockchain-interaction-service"
+            - name: AnalyticConnString
+              value: "https://blockchain-interaction-service"
