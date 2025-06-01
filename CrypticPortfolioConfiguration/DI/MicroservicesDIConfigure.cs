@@ -22,5 +22,10 @@ public static class MicroservicesDIConfigure
         {
             opt.Address = new Uri(cfg.AnalyticConnString);
         }).ConfigurePrimaryHttpMessageHandler(() => customHandler);
+        
+        services.AddGrpcClient<AnalyticTransactionService.AnalyticTransactionServiceClient>(opt =>
+        {
+            opt.Address = new Uri(cfg.AnalyticConnString);
+        }).ConfigurePrimaryHttpMessageHandler(() => customHandler);
     }
 }
