@@ -387,21 +387,20 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     {
         var portfolioEntity = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
         if (portfolioEntity == null)
-        {
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
-        }
-
         var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
-
+        
         var response = new GetPortfolioWalletsInfoResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
             Result = new TaskResponse { Success = true }
         };
 
+        if (walletEntities == null || walletEntities.Count == 0)
+            return response;
+        
         foreach (var w in walletEntities)
         {
-
             var grpcReq = new GetWalletCoinsByAddressRequest
             {
                 Address = w.WalletAddress,
@@ -413,25 +412,38 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             {
                 coinsResponse = await _walletService.GetWalletCoinsByAddressAsync(grpcReq);
             }
-            catch (RpcException ex)
+            catch (RpcException)
             {
                 continue;
             }
-
-            var walletWithCoins = new WalletWithCoins()
+            
+            var walletDto = new Wallet
             {
-                WalletId = w.Id,
-                WalletAddress = w.WalletAddress
+                Id = w.Id,
+                PortfolioId = w.PortfolioId,
+                WalletAddress = w.WalletAddress,
+                CreatedAt = w.CreatedAt,
+                ConnectionType = w.ConnectionType,
+                Visibility = w.Visibility,
+                Name = w.Name ?? string.Empty,
+                CaipAddress = w.CaipAddress ?? string.Empty,
+                Connector = w.Connector ?? string.Empty,
+                Network = DetectNetwork(w.WalletAddress)
             };
             
-            foreach (var coin in coinsResponse.Coins)
+            var walletWithCoins = new WalletWithCoins
             {
-                walletWithCoins.Coins.Add(new Coin
+                Wallet = walletDto
+            };
+            
+            foreach (var c in coinsResponse.Coins)
+            {
+                walletWithCoins.Coins.Add(new Cryptic.BlockchainInteraction.Models.Responses.Coin
                 {
-                    Symbol = coin.Symbol,
-                    Balance = coin.Balance,
-                    Image = coin.Image,
-                    Name = coin.Name
+                    Symbol = c.Symbol,
+                    Balance = c.Balance,
+                    Image = c.Image,
+                    Name = c.Name
                 });
             }
 
@@ -439,5 +451,14 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         }
 
         return response;
+    }
+
+    private string DetectNetwork(string address)
+    {
+        if (address.StartsWith("0x") && address.Length == 42)
+            return "eth";
+        if (System.Text.RegularExpressions.Regex.IsMatch(address, "^(1|3|bc1)"))
+            return "btc";
+        return "sol";
     }
 }
