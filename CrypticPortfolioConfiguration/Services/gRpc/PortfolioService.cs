@@ -1,9 +1,10 @@
 using Cryptic_Domain.Enums.Portfolio;
 using Cryptic_Domain.Models.MassTransit;
 using Cryptic.Base.V1.Models.Responses;
+using Cryptic.BlockchainInteraction.Models.Requests;
+using Cryptic.BlockchainInteraction.Models.Responses;
 using Cryptic.BlockchainInteraction.Rpc;
 using Cryptic.PortfolioAnalytic.Models.Requests;
-using Cryptic.PortfolioAnalytic.Models.Responses;
 using Cryptic.PortfolioAnalytic.Rpc;
 using Cryptic.PortfolioConfiguration.Models.Requests;
 using Cryptic.PortfolioConfiguration.Models.Responses;
@@ -12,6 +13,9 @@ using CrypticPortfolioConfiguration.Database.Repos;
 using CrypticPortfolioConfiguration.Database.Tables;
 using Grpc.Core;
 using MassTransit;
+using GetWalletTransactionsRequest = Cryptic.PortfolioAnalytic.Models.Requests.GetWalletTransactionsRequest;
+using GetWalletTransactionsResponse = Cryptic.PortfolioAnalytic.Models.Responses.GetWalletTransactionsResponse;
+using WalletWithCoins = Cryptic.PortfolioConfiguration.Models.Responses.WalletWithCoins;
 
 namespace CrypticPortfolioConfiguration.Services.gRpc;
 
@@ -28,7 +32,8 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
     public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo,
         WalletService.WalletServiceClient walletService,
         PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService,
-        IPublishEndpoint publishEndpoint, ILogger<PortfolioServiceImpl> logger, AnalyticTransactionService.AnalyticTransactionServiceClient transactionService)
+        IPublishEndpoint publishEndpoint, ILogger<PortfolioServiceImpl> logger,
+        AnalyticTransactionService.AnalyticTransactionServiceClient transactionService)
     {
         _portfolioRepo = portfolioRepo;
         _walletRepo = walletRepo;
@@ -307,15 +312,15 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolioId"));
         }
-        
+
         var portfolioEntity = await _portfolioRepo.GetByIdAsync(request.PortfolioId);
         if (portfolioEntity == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
         }
-        
+
         var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
-        
+
         if (walletEntities == null || !walletEntities.Any())
         {
             return new GetPortfolioTransactionsResponse
@@ -342,7 +347,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
                 To = request.DateRange.To
             };
         }
-        
+
         foreach (var w in walletEntities)
         {
             analyticRequest.Wallets.Add(new WalletQuery
@@ -351,7 +356,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
                 WalletAddress = w.WalletAddress
             });
         }
-        
+
         GetWalletTransactionsResponse analyticResponse;
         try
         {
@@ -362,7 +367,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             _logger.LogError(ex, "Error calling PortfolioAnalyticService.GetWalletTransactionsAsync");
             throw;
         }
-        
+
         var response = new GetPortfolioTransactionsResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
@@ -370,8 +375,68 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             Page = analyticResponse.Page,
             PerPage = analyticResponse.PerPage
         };
-        
+
         response.Transactions.Add(analyticResponse);
+
+        return response;
+    }
+
+    public override async Task<GetPortfolioWalletsInfoResponse> GetPortfolioWalletsInfo(
+        GetPortfolioInfoRequest request,
+        ServerCallContext context)
+    {
+        var portfolioEntity = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
+        if (portfolioEntity == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
+        }
+
+        var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+
+        var response = new GetPortfolioWalletsInfoResponse
+        {
+            Portfolio = ToGrpcPortfolio(portfolioEntity),
+            Result = new TaskResponse { Success = true }
+        };
+
+        foreach (var w in walletEntities)
+        {
+
+            var grpcReq = new GetWalletCoinsByAddressRequest
+            {
+                Address = w.WalletAddress,
+                PortfolioId = request.PortfolioId
+            };
+
+            GetWalletCoinsResponse coinsResponse;
+            try
+            {
+                coinsResponse = await _walletService.GetWalletCoinsByAddressAsync(grpcReq);
+            }
+            catch (RpcException ex)
+            {
+                continue;
+            }
+
+            var walletWithCoins = new WalletWithCoins()
+            {
+                WalletId = w.Id,
+                WalletAddress = w.WalletAddress
+            };
+            
+            foreach (var coin in coinsResponse.Coins)
+            {
+                walletWithCoins.Coins.Add(new Coin
+                {
+                    Symbol = coin.Symbol,
+                    Balance = coin.Balance,
+                    Image = coin.Image,
+                    Name = coin.Name
+                });
+            }
+
+            response.WalletInfo.Add(walletWithCoins);
+        }
 
         return response;
     }
