@@ -350,7 +350,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         {
             Page = request.Page <= 0 ? 1 : request.Page,
             PerPage = request.PerPage <= 0 ? 10 : request.PerPage,
-            TransactionType = request.TransactionType
+            TransactionType = request.TransactionType, Search = request.Search
         };
 
         if (request.DateRange != null)
