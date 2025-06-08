@@ -4,11 +4,12 @@ using Cryptic_Domain.Database.Interfaces;
 using Cryptic_Domain.Database.Repos.Base;
 using Cryptic_Domain.Helpers;
 using CrypticPortfolioConfiguration.Database.Tables;
+using CrypticPortfolioConfiguration.Interfaces.Database;
 using Npgsql;
 
 namespace CrypticPortfolioConfiguration.Database.Repos;
 
-public class PortfolioRepo : BaseDbRepo<PortfolioTable>
+public class PortfolioRepo : BaseDbRepo<PortfolioTable>, IPortfolioRepo
 {
     public PortfolioRepo(IDatabaseConnectionService connectionService, IDatabaseConfiguration configuration)
         : base(connectionService, configuration)

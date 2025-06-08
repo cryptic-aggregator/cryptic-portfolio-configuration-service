@@ -1,4 +1,5 @@
 using CrypticPortfolioConfiguration.Database.Repos;
+using CrypticPortfolioConfiguration.Interfaces.Database;
 
 namespace CrypticPortfolioConfiguration.DI;
 
@@ -8,5 +9,8 @@ public static class ReposDIConfigure
     {
         services.AddScoped<PortfolioRepo>();
         services.AddScoped<WalletRepo>();
+
+        services.AddScoped<IPortfolioRepo, PortfolioRepo>();
+        services.AddScoped<IWalletRepo, WalletRepo>();
     }
 }

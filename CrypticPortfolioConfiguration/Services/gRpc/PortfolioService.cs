@@ -5,12 +5,14 @@ using Cryptic.BlockchainInteraction.Models.Requests;
 using Cryptic.BlockchainInteraction.Models.Responses;
 using Cryptic.BlockchainInteraction.Rpc;
 using Cryptic.PortfolioAnalytic.Models.Requests;
+using Cryptic.PortfolioAnalytic.Models.Responses;
 using Cryptic.PortfolioAnalytic.Rpc;
 using Cryptic.PortfolioConfiguration.Models.Requests;
 using Cryptic.PortfolioConfiguration.Models.Responses;
 using Cryptic.PortfolioConfiguration.Rpc;
 using CrypticPortfolioConfiguration.Database.Repos;
 using CrypticPortfolioConfiguration.Database.Tables;
+using CrypticPortfolioConfiguration.Interfaces.Database;
 using Grpc.Core;
 using MassTransit;
 using GetWalletTransactionsRequest = Cryptic.PortfolioAnalytic.Models.Requests.GetWalletTransactionsRequest;
@@ -21,15 +23,15 @@ namespace CrypticPortfolioConfiguration.Services.gRpc;
 
 public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 {
-    private readonly WalletRepo _walletRepo;
-    private readonly PortfolioRepo _portfolioRepo;
+    private readonly IWalletRepo _walletRepo;
+    private readonly IPortfolioRepo _portfolioRepo;
     private readonly WalletService.WalletServiceClient _walletService;
     private readonly PortfolioAnalyticService.PortfolioAnalyticServiceClient _portfolioAnalyticService;
     private readonly AnalyticTransactionService.AnalyticTransactionServiceClient _transactionService;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<PortfolioServiceImpl> _logger;
 
-    public PortfolioServiceImpl(PortfolioRepo portfolioRepo, WalletRepo walletRepo,
+    public PortfolioServiceImpl(IPortfolioRepo portfolioRepo, IWalletRepo walletRepo,
         WalletService.WalletServiceClient walletService,
         PortfolioAnalyticService.PortfolioAnalyticServiceClient portfolioAnalyticService,
         IPublishEndpoint publishEndpoint, ILogger<PortfolioServiceImpl> logger,
@@ -235,28 +237,40 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         ServerCallContext context)
     {
         if (request.PortfolioId <= 0)
-        {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio ID"));
+
+        var walletTables = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            walletTables = walletTables
+                .Where(w => w.WalletAddress.Contains(request.Search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
 
-        var walletTables = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
+        if (request.Networks.Count > 0)
+        {
+            walletTables = walletTables
+                .Where(w => request.Networks.Contains(DetectNetwork(w.WalletAddress), StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
 
         var response = new GetWalletsByPortfolioIdResponse();
         foreach (var w in walletTables)
         {
-            var wallet = new Wallet
+            response.Wallets.Add(new Wallet
             {
                 Id = w.Id,
                 PortfolioId = w.PortfolioId,
                 WalletAddress = w.WalletAddress,
-                Visibility = w.Visibility,
-                ConnectionType = w.ConnectionType,
                 CreatedAt = w.CreatedAt,
-                Name = w.Name,
-                Connector = w.Connector,
-                CaipAddress = w.CaipAddress
-            };
-            response.Wallets.Add(wallet);
+                ConnectionType = w.ConnectionType,
+                Visibility = w.Visibility,
+                Name = w.Name ?? "",
+                CaipAddress = w.CaipAddress ?? "",
+                Connector = w.Connector ?? "",
+                Network = DetectNetwork(w.WalletAddress)
+            });
         }
 
         return response;
@@ -389,7 +403,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         if (portfolioEntity == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found"));
         var walletEntities = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
-        
+
         var response = new GetPortfolioWalletsInfoResponse
         {
             Portfolio = ToGrpcPortfolio(portfolioEntity),
@@ -398,7 +412,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
         if (walletEntities == null || walletEntities.Count == 0)
             return response;
-        
+
         foreach (var w in walletEntities)
         {
             var grpcReq = new GetWalletCoinsByAddressRequest
@@ -416,7 +430,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             {
                 continue;
             }
-            
+
             var walletDto = new Wallet
             {
                 Id = w.Id,
@@ -430,12 +444,12 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
                 Connector = w.Connector ?? string.Empty,
                 Network = DetectNetwork(w.WalletAddress)
             };
-            
+
             var walletWithCoins = new WalletWithCoins
             {
                 Wallet = walletDto
             };
-            
+
             foreach (var c in coinsResponse.Coins)
             {
                 walletWithCoins.Coins.Add(new Cryptic.BlockchainInteraction.Models.Responses.Coin
@@ -448,6 +462,68 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             }
 
             response.WalletInfo.Add(walletWithCoins);
+        }
+
+        return response;
+    }
+
+    public override async Task<GetPortfolioCorrelationResponse>
+        GetPortfolioCorrelation(GetPortfolioCorrelationRequest request,
+            ServerCallContext context)
+    {
+        if (request.PortfolioId <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio_id"));
+        if (string.IsNullOrWhiteSpace(request.TokenSymbol))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "token_symbol is required"));
+        if (request.FromTs == null || request.FromTs >= request.ToTs)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid date_range"));
+
+        var wallets = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+        var walletIds = wallets.Select(w => w.Id).ToList();
+        if (!walletIds.Any())
+        {
+            return new GetPortfolioCorrelationResponse
+            {
+                Result = new TaskResponse { Success = true }
+            };
+        }
+
+        var analyticReq = new Cryptic.PortfolioAnalytic.Models.Requests.GetPortfolioVsTokenPointsRequest
+        {
+            TokenSymbol = request.TokenSymbol,
+            FromTs = request.FromTs,
+            ToTs = request.ToTs,
+            PointsCount = 12
+        };
+        analyticReq.WalletIds.AddRange(walletIds);
+
+        GetPortfolioCorrelationResponse analyticResp;
+        try
+        {
+            analyticResp = await _portfolioAnalyticService
+                .GetPortfolioVsTokenPointsAsync(analyticReq);
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "Error calling analytic service");
+            throw;
+        }
+
+        var response = new GetPortfolioCorrelationResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
+
+        foreach (var p in analyticResp.Points)
+        {
+            response.Points.Add(new PortfolioCorrelationPoint
+            {
+                Ts = p.Ts,
+                PortfolioValue = p.PortfolioValue,
+                TokenPrice = p.TokenPrice,
+                PortfolioChangePct = p.PortfolioChangePct,
+                TokenChangePct = p.TokenChangePct
+            });
         }
 
         return response;

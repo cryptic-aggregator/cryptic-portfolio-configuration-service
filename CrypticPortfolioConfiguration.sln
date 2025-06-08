@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrypticPortfolioConfigurati
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptic Domain", "cryptic-domain\Cryptic Domain\Cryptic Domain.csproj", "{EF16B4C2-0C87-4BC5-BC32-603BACA46985}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrypticPortfolioConfigurationTests", "CrypticPortfolioConfigurationTests\CrypticPortfolioConfigurationTests.csproj", "{D2EFCDFF-575D-49BF-B91E-CC5208FAFE4F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{EF16B4C2-0C87-4BC5-BC32-603BACA46985}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF16B4C2-0C87-4BC5-BC32-603BACA46985}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF16B4C2-0C87-4BC5-BC32-603BACA46985}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2EFCDFF-575D-49BF-B91E-CC5208FAFE4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2EFCDFF-575D-49BF-B91E-CC5208FAFE4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2EFCDFF-575D-49BF-B91E-CC5208FAFE4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2EFCDFF-575D-49BF-B91E-CC5208FAFE4F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -3,11 +3,12 @@ using Cryptic_Domain.Database.Interfaces;
 using Cryptic_Domain.Database.Repos.Base;
 using Cryptic_Domain.Helpers;
 using CrypticPortfolioConfiguration.Database.Tables;
+using CrypticPortfolioConfiguration.Interfaces.Database;
 using Npgsql;
 
 namespace CrypticPortfolioConfiguration.Database.Repos;
 
-public class WalletRepo : BaseDbRepo<WalletTable>
+public class WalletRepo : BaseDbRepo<WalletTable>, IWalletRepo
 {
     public WalletRepo(IDatabaseConnectionService connectionService, IDatabaseConfiguration configuration)
         : base(connectionService, configuration)
