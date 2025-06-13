@@ -239,7 +239,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         if (request.PortfolioId <= 0)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio ID"));
 
-        var walletTables = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+        var walletTables = await _walletRepo.GetByPortfolioIdAsync(request.PortfolioId);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -274,6 +274,27 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         }
 
         return response;
+    }
+    
+    public override async Task<DeleteWalletResponse> DeleteWallet(DeleteWalletRequest request, ServerCallContext context)
+    {
+        if (request.PortfolioId <= 0 || request.WalletId <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio or wallet ID"));
+        
+        var portfolio = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
+        if (portfolio == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found or access denied"));
+
+        var wallet = await _walletRepo.GetByIdAsync(request.WalletId);
+        if (wallet == null || wallet.PortfolioId != request.PortfolioId)
+            throw new RpcException(new Status(StatusCode.NotFound, "Wallet not found in this portfolio"));
+        
+        await _walletRepo.DeleteAsync(request.WalletId);
+
+        return new DeleteWalletResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
     }
 
     public override async Task<GetPortfolioCalculationResponse> GetPortfolioCalculation(
