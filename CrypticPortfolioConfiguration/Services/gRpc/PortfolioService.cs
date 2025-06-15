@@ -15,6 +15,9 @@ using CrypticPortfolioConfiguration.Database.Tables;
 using CrypticPortfolioConfiguration.Interfaces.Database;
 using Grpc.Core;
 using MassTransit;
+using GetPortfolioBalancePointsRequest = Cryptic.PortfolioAnalytic.Models.Requests.GetPortfolioBalancePointsRequest;
+using GetPortfolioBalancePointsResponse =
+    Cryptic.PortfolioConfiguration.Models.Responses.GetPortfolioBalancePointsResponse;
 using GetPortfolioPnlPointsRequest = Cryptic.PortfolioConfiguration.Models.Requests.GetPortfolioPnlPointsRequest;
 using GetWalletTransactionsRequest = Cryptic.PortfolioAnalytic.Models.Requests.GetWalletTransactionsRequest;
 using GetWalletTransactionsResponse = Cryptic.PortfolioAnalytic.Models.Responses.GetWalletTransactionsResponse;
@@ -631,6 +634,31 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         return response;
     }
 
+    public override async Task<GetPortfolioBalancePointsResponse> GetPortfolioBalancePoints(
+        Cryptic.PortfolioConfiguration.Models.Requests.GetPortfolioBalancePointsRequest request,
+        ServerCallContext context)
+    {
+        var wallets = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+        var walletIds = wallets.Select(w => w.Id).ToList();
+
+        var analyticReq = new GetPortfolioBalancePointsRequest
+        {
+            WalletIds = { walletIds },
+            FromTs = request.FromTs,
+            ToTs = request.ToTs,
+            PointsCount = request.PointsCount
+        };
+
+        var analyticResp = await _portfolioAnalyticService
+            .GetPortfolioBalancePointsAsync(analyticReq);
+
+        var resp = new GetPortfolioBalancePointsResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
+        resp.Points.AddRange(analyticResp.Points);
+        return resp;
+    }
 
     private string DetectNetwork(string address)
     {
