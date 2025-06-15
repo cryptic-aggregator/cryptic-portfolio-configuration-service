@@ -15,6 +15,7 @@ using CrypticPortfolioConfiguration.Database.Tables;
 using CrypticPortfolioConfiguration.Interfaces.Database;
 using Grpc.Core;
 using MassTransit;
+using GetPortfolioPnlPointsRequest = Cryptic.PortfolioConfiguration.Models.Requests.GetPortfolioPnlPointsRequest;
 using GetWalletTransactionsRequest = Cryptic.PortfolioAnalytic.Models.Requests.GetWalletTransactionsRequest;
 using GetWalletTransactionsResponse = Cryptic.PortfolioAnalytic.Models.Responses.GetWalletTransactionsResponse;
 using WalletWithCoins = Cryptic.PortfolioConfiguration.Models.Responses.WalletWithCoins;
@@ -275,12 +276,13 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
         return response;
     }
-    
-    public override async Task<DeleteWalletResponse> DeleteWallet(DeleteWalletRequest request, ServerCallContext context)
+
+    public override async Task<DeleteWalletResponse> DeleteWallet(DeleteWalletRequest request,
+        ServerCallContext context)
     {
         if (request.PortfolioId <= 0 || request.WalletId <= 0)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio or wallet ID"));
-        
+
         var portfolio = await _portfolioRepo.GetByIdAndOwnerIdAsync(request.PortfolioId, request.OwnerId);
         if (portfolio == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Portfolio not found or access denied"));
@@ -288,7 +290,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
         var wallet = await _walletRepo.GetByIdAsync(request.WalletId);
         if (wallet == null || wallet.PortfolioId != request.PortfolioId)
             throw new RpcException(new Status(StatusCode.NotFound, "Wallet not found in this portfolio"));
-        
+
         await _walletRepo.DeleteAsync(request.WalletId);
 
         return new DeleteWalletResponse
@@ -549,6 +551,62 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
         return response;
     }
+
+    public override async Task<GetPortfolioPnlPointsResponse> GetPortfolioPnlPoints(
+        GetPortfolioPnlPointsRequest request,
+        ServerCallContext context)
+    {
+        if (request.PortfolioId <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio_id"));
+        if (request.FromTs >= request.ToTs)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid time range"));
+        
+        var wallets = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
+        var walletIds = wallets.Select(w => w.Id).ToList();
+        if (!walletIds.Any())
+        {
+            return new GetPortfolioPnlPointsResponse
+            {
+                Result = new TaskResponse { Success = true }
+            };
+        }
+        
+        var analyticReq = new Cryptic.PortfolioAnalytic.Models.Requests.GetPortfolioPnlPointsRequest
+        {
+            FromTs = request.FromTs,
+            ToTs = request.ToTs,
+            PointsCount = request.PointsCount > 1 ? request.PointsCount : 12
+        };
+        analyticReq.WalletIds.AddRange(walletIds);
+        
+        Cryptic.PortfolioAnalytic.Models.Responses.GetPortfolioPnlPointsResponse analyticResp;
+        try
+        {
+            analyticResp = await _portfolioAnalyticService.GetPortfolioPnlPointsAsync(analyticReq);
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "Error calling analytic service");
+            throw;
+        }
+        
+        var response = new GetPortfolioPnlPointsResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
+        foreach (var p in analyticResp.Points)
+        {
+            response.Points.Add(new PnlPoint
+            {
+                Ts = p.Ts,
+                Profit = p.Profit,
+                Loss = p.Loss
+            });
+        }
+
+        return response;
+    }
+
 
     private string DetectNetwork(string address)
     {
