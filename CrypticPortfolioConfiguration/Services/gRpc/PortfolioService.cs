@@ -152,7 +152,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             };
 
             var created = await _walletRepo.CreateAsync(entity);
-            await _publishEndpoint.Publish(new NewWalletConnectedMessage(created.Id, created.WalletAddress));
+            /*await _publishEndpoint.Publish(new NewWalletConnectedMessage(created.Id, created.WalletAddress));*/
 
             resp.Wallets.Add(new Wallet
             {
