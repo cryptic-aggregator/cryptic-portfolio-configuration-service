@@ -191,14 +191,38 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
 
             var walletCoinsResponse = await _walletService.GetWalletCoinsAsync(walletCoinsRequest);
 
-            response = new GetPortfolioInfoResponse
+            var dto = new GetPortfolioInfoResponse
             {
                 Portfolio = ToGrpcPortfolio(portfolioEntity),
                 WalletInfo = walletCoinsResponse,
                 Result = new TaskResponse { Success = true }
             };
 
-            return response;
+            if (request.FromTs > 0 && request.ToTs > request.FromTs)
+            {
+                var walletIds = walletEntities.Select(w => w.Id).ToArray();
+                var analyticReq = new GetPortfolioBalancePointsRequest
+                {
+                    FromTs = request.FromTs,
+                    ToTs = request.ToTs,
+                    PointsCount = 6
+                };
+                analyticReq.WalletIds.AddRange(walletIds);
+
+                var analyticResp = await _portfolioAnalyticService
+                    .GetPortfolioBalancePointsAsync(analyticReq);
+
+                foreach (var p in analyticResp.Points)
+                {
+                    dto.BalancePoints.Add(new BalancePoint
+                    {
+                        Ts = p.Ts,
+                        Balance = p.Balance
+                    });
+                }
+            }
+
+            return dto;
         }
 
 
@@ -560,7 +584,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid portfolio_id"));
         if (request.FromTs >= request.ToTs)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid time range"));
-        
+
         var wallets = await _walletRepo.GetVisibleByPortfolioIdAsync(request.PortfolioId);
         var walletIds = wallets.Select(w => w.Id).ToList();
         if (!walletIds.Any())
@@ -570,7 +594,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
                 Result = new TaskResponse { Success = true }
             };
         }
-        
+
         var analyticReq = new Cryptic.PortfolioAnalytic.Models.Requests.GetPortfolioPnlPointsRequest
         {
             FromTs = request.FromTs,
@@ -578,7 +602,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             PointsCount = request.PointsCount > 1 ? request.PointsCount : 12
         };
         analyticReq.WalletIds.AddRange(walletIds);
-        
+
         Cryptic.PortfolioAnalytic.Models.Responses.GetPortfolioPnlPointsResponse analyticResp;
         try
         {
@@ -589,7 +613,7 @@ public class PortfolioServiceImpl : PortfolioService.PortfolioServiceBase
             _logger.LogError(ex, "Error calling analytic service");
             throw;
         }
-        
+
         var response = new GetPortfolioPnlPointsResponse
         {
             Result = new TaskResponse { Success = true }
